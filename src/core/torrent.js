@@ -1,7 +1,6 @@
 const createTorrent = require('create-torrent');
-const { promisify } = require('util');
 const parseTorrent = require('parse-torrent');
-const crypto = require('crypto');
+const { promisify } = require('util');
 
 /**
  * 
@@ -10,11 +9,10 @@ const crypto = require('crypto');
  * @returns {string}
  */
 async function getMagnetUri(oStream) {
-    const hashPipe = crypto.createHash('MD5');
-    await promisify(oStream.pipe(hashPipe).one)('end');
-    const hash = hashPipe.read();
-    const magnetUri = parseTorrent.toMagnetURI({ infoHash: endTask });
-    return magnetUri;
+    const torrentBuffer = await promisify(createTorrent)(oStream);
+    const torrentInfo = parseTorrent(torrentBuffer);
+    const uri = parseTorrent.toMagnetURI(torrentInfo);
+    return uri;
 }
 
 module.exports = {
