@@ -6,9 +6,10 @@
   "bin": "./dist/bin/obn.js",
   "preferGlobal": true,
   "scripts": {
-    "postinstall": "babel src -d dist && node ./dist/post_install.js",
+    "postinstall": "node ./dist/post_install.js",
     "test": "npm run lint && jest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "babel src -d dist"
   },
   "repository": {
     "type": "git",
@@ -18,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
+    "babel-polyfill": "^6.26.0",
     "bluebird": "^3.5.1",
     "chokidar": "^2.0.3",
     "commander": "^2.15.1",

@@ -1,3 +1,4 @@
+require('babel-polyfill');
 const Wallet = require('./wallet');
 const Consumer = require('./consumer');
 const Producer = require('./producer');
