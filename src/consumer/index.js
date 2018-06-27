@@ -44,6 +44,12 @@ async function createConsumerP({address}) {
     return newConsumerInfo;
 }
 
+async function updateConsumerP(consumer){
+    const newConsumerInfo = await api.put({url: `/consumers/${consumer.id}`, body: consumer, token: CM.configs.authToken});
+    console.log('Updated consumer: ', newConsumerInfo);
+    
+    return newConsumerInfo;
+}
 // default parts count = 5
 // minSize = 10MB
 
@@ -161,6 +167,7 @@ function createConsumerPromptP() {
 module.exports = {
     createConsumerPromptP,
     createConsumerP,
+    updateConsumerP,
     getConsumersP,
     uploadFilePromptP
 };

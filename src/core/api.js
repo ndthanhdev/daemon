@@ -31,6 +31,10 @@ function send({url, method = 'GET', headers = {}, token, body}) {
         .catch(({response}) => BPromise.reject(pick(['data', 'status', 'statusText', 'headers'], response)));
 }
 
+function put(params) {
+    return send({...params, method: 'PUT'});
+}
+
 function post(params) {
     return send({...params, method: 'POST'});
 }
@@ -40,6 +44,7 @@ function get(params) {
 }
 
 module.exports = {
+    put,
     post,
     get
 };
