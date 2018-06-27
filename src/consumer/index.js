@@ -24,6 +24,13 @@ async function createConsumerP({tier, name}) {
         console.log('Generated a new consumer key:', key);
         console.log('Created new consumer space at:', space);
         console.log('Created new consumer config at:', config);
+async function updateConsumerP(consumer){
+    const newConsumerInfo = await api.put({url: `/consumers/${consumer.id}`, body: consumer, token: CM.configs.authToken});
+    console.log('Updated consumer: ', newConsumerInfo);
+    return newConsumerInfo;
+    
+}
+
     }
 
     const consumerInfo = await api.post({url: '/consumers', body: {tier, name}, token: CM.configs.authToken});
@@ -43,6 +50,7 @@ function createConsumerActivationP({consumerId, accountIndex, value}) {
 
 module.exports = {
     createConsumerP,
+    updateConsumerP,
     getConsumersP,
     createConsumerActivationP
 };
