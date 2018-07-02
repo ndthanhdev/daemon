@@ -3,20 +3,21 @@
  */
 const uuid = require('uuid/v4');
 const BPromise = require('bluebird');
-const {createReadStream, stat} = require('fs');
-const {basename, join} = require('path');
-const {createGzip} = require('zlib');
-const {pick} = require('ramda');
+const { createReadStream, stat } = require('fs');
+const { basename, join } = require('path');
+const { createGzip } = require('zlib');
+const { pick } = require('ramda');
+const { seed } = require('../core/torrent');
 
 /**
  * Project imports
  */
-const {promptHeaderP} = require('../core/prompt');
+const { promptHeaderP } = require('../core/prompt');
 const CM = require('../config-manager');
 const SM = require('../space-manager');
 const api = require('../core/api');
-const {splitToDiskP} = require('../core/file');
-const {createCipher} = require('../core/crypto');
+const { splitToDiskP } = require('../core/file');
+const { createCipher } = require('../core/crypto');
 
 // IMPORTANT:
 // We don't handle errors here since they will not be propagated to CLI or Client.
@@ -25,12 +26,12 @@ const {createCipher} = require('../core/crypto');
 const statP = BPromise.promisify(stat);
 
 function getConsumersP() {
-    return api.get({url: '/consumers', token: CM.configs.authToken});
+    return api.get({ url: '/consumers', token: CM.configs.authToken });
 }
 
-async function createConsumerP({address}) {
-    const newConsumerInfo = await api.post({url: '/consumers', body: {address}, token: CM.configs.authToken});
-    const {id} = newConsumerInfo;
+async function createConsumerP({ address }) {
+    const newConsumerInfo = await api.post({ url: '/consumers', body: { address }, token: CM.configs.authToken });
+    const { id } = newConsumerInfo;
     const key = uuid();
     console.log('Generated a new consumer key:', key);
     console.log('OBN Daemon will use this consumer key to encrypt/decrypt your data, please save this key in a secure place');
@@ -38,16 +39,16 @@ async function createConsumerP({address}) {
     const space = await SM.makeConsumerSpace(id);
     console.log('Created new consumer space at:', space);
 
-    const consumerConfigFilePath = await CM.writeConsumerConfigFileP(id, {id, key, space});
+    const consumerConfigFilePath = await CM.writeConsumerConfigFileP(id, { id, key, space });
     console.log('Created new consumer config at:', consumerConfigFilePath);
 
     return newConsumerInfo;
 }
 
-async function updateConsumerP(consumer){
-    const newConsumerInfo = await api.put({url: `/consumers/${consumer.id}`, body: consumer, token: CM.configs.authToken});
+async function updateConsumerP(consumer) {
+    const newConsumerInfo = await api.put({ url: `/consumers/${consumer.id}`, body: consumer, token: CM.configs.authToken });
     console.log('Updated consumer: ', newConsumerInfo);
-    
+
     return newConsumerInfo;
 }
 // default parts count = 5
@@ -71,7 +72,7 @@ async function updateConsumerP(consumer){
 // for each shard ->
 
 
-async function _prepareFileP({filePath, key, space}) {
+async function _prepareFileP({ filePath, key, space }) {
     if (!key) {
         return BPromise.reject(new Error('Consumer key is not found'));
     }
@@ -97,12 +98,12 @@ async function _prepareFileP({filePath, key, space}) {
     const encryptedFileStream = createReadStream(filePath)
         .pipe(createCipher(key))
         .pipe(createGzip());
-    await splitToDiskP(encryptedFileStream, GB_SIZE, rootFileName);
+    return await splitToDiskP(encryptedFileStream, GB_SIZE, rootFileName);
 }
 
 
 // TODO: allow user to add consumer config
-function uploadFile({filePath, consumerId}) {
+async function uploadFile({ name, filePath, consumerId }) {
     console.log('Start uploading process...');
     console.log('> Please don\'t open/modify the file in during the process');
 
@@ -110,8 +111,12 @@ function uploadFile({filePath, consumerId}) {
     // - read consumer config file failed
     // - make sure consumer space is present
     // - filePath is invalid
-    return CM.readConsumerConfigFileP(consumerId)
-        .then(({key, space}) => _prepareFileP({filePath, key, space}));
+    const shards = await CM.readConsumerConfigFileP(consumerId)
+        .then(({ key, space }) => _prepareFileP({ filePath, key, space }));
+    const streams = shards.map(shard => createReadStream(shard));
+    const magnetUris = await Promise.all(streams.map(stream => seed(stream)));
+    const file = await api.post({ url: '/files', body: { magnetUris, name, consumerId }, token: CM.configs.authToken });
+    return file;
 }
 
 async function uploadFilePromptP() {
@@ -169,5 +174,6 @@ module.exports = {
     createConsumerP,
     updateConsumerP,
     getConsumersP,
-    uploadFilePromptP
+    uploadFilePromptP,
+    uploadFile
 };
