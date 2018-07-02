@@ -33,20 +33,17 @@ async function createConsumerP({tier, name}) {
         console.log('Generated a new consumer key:', key);
         console.log('Created new consumer space at:', space);
         console.log('Created new consumer config at:', config);
-async function createConsumerP({ address }) {
-    const newConsumerInfo = await api.post({ url: '/consumers', body: { address }, token: CM.configs.authToken });
-    const { id } = newConsumerInfo;
+    }
+
+    const consumerInfo = await api.post({url: '/consumers', body: {tier, name}, token: CM.configs.authToken});
+
     const key = uuid();
-    console.log('Generated a new consumer key:', key);
-    console.log('OBN Daemon will use this consumer key to encrypt/decrypt your data, please save this key in a secure place');
+    const space = await SM.makeConsumerSpace(consumerInfo.id);
+    const config = await CM.writeConsumerConfigFileP(consumerInfo.id, {id: consumerInfo.id, key, space});
 
-    const space = await SM.makeConsumerSpace(id);
-    console.log('Created new consumer space at:', space);
+    printNewConsumerInfo({key, space, config});
 
-    const consumerConfigFilePath = await CM.writeConsumerConfigFileP(id, { id, key, space });
-    console.log('Created new consumer config at:', consumerConfigFilePath);
-
-    return newConsumerInfo;
+    return consumerInfo;
 }
 
 async function updateConsumerP(consumer) {
@@ -79,16 +76,7 @@ async function _prepareFileP({ filePath, key, space }) {
     if (!key) {
         return BPromise.reject(new Error('Consumer key is not found'));
     }
-
-    const consumerInfo = await api.post({url: '/consumers', body: {tier, name}, token: CM.configs.authToken});
-
-    const key = uuid();
-    const space = await SM.makeConsumerSpace(consumerInfo.id);
-    const config = await CM.writeConsumerConfigFileP(consumerInfo.id, {id: consumerInfo.id, key, space});
-
-    printNewConsumerInfo({key, space, config});
-
-    return consumerInfo;
+    
     if (!inputFileStat.size) {
         return BPromise.reject(new Error('File is empty'));
     }
@@ -105,6 +93,7 @@ async function _prepareFileP({ filePath, key, space }) {
 
 function createConsumerActivationP({consumerId, accountIndex, value}) {
     return ContractService.createConsumerActivationP({consumerId, accountIndex, value});
+}
 
 // TODO: allow user to add consumer config
 async function uploadFile({ name, filePath, consumerId }) {
@@ -127,7 +116,7 @@ module.exports = {
     createConsumerP,
     updateConsumerP,
     getConsumersP,
-    createConsumerActivationP
+    createConsumerActivationP,
     uploadFilePromptP,
     uploadFile
 };
